@@ -60,7 +60,7 @@ def get_books():
         return response
     
     search_query = request.args.get('search', '').strip().lower()
-    genre_filter = request.args.get('genre', '').strip().lower() # Ubah ke genre
+    genre_filter = request.args.get('genre', '').strip().lower()
     
     filtered_books = books.copy()
     
@@ -78,7 +78,6 @@ def get_books():
         ]
         
     return jsonify(filtered_books)
-    # --- AKHIR TAMBAHAN ---
 
 @app.route('/api/books', methods=['POST'])
 def add_book():
@@ -87,55 +86,54 @@ def add_book():
         'id': len(books) + 1,
         'title': data.get('title'),
         'author': data.get('author'),
-        'cover': data.get('cover', ''),  # Book cover image URL
-        'rating': data.get('rating', 0),  # Book rating (0-5)
-        'pages': data.get('pages', 0),    # Number of pages
-        'genre': data.get('genre', ''),   # Book genre
-        'status': data.get('status', 'want-to-read')  # Reading status
+        'cover': data.get('cover', ''),
+        'rating': data.get('rating', 0),
+        'pages': data.get('pages', 0),
+        'genre': data.get('genre', ''),
+        'status': data.get('status', 'want-to-read')
     }
     books.append(book)
-    save_books(books)  # Save to JSON file
+    save_books(books)
     return jsonify(book), 201
 
-@app.route('/api/books/<int:book_id>', methods=['PUT', 'OPTIONS'])
-def update_book(book_id):
+# PENGGABUNGAN ROUTE UNTUK SATU BUKU (GET, PUT, DELETE)
+@app.route('/api/books/<int:book_id>', methods=['GET', 'PUT', 'DELETE', 'OPTIONS'])
+def book_detail(book_id):
     if request.method == 'OPTIONS':
-        # Handle preflight request
         response = jsonify({})
         response.headers.add('Access-Control-Allow-Origin', '*')
         response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
         response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
         return response
+
+    # Cari buku berdasarkan ID
+    book = next((b for b in books if b['id'] == book_id), None)
     
-    data = request.json
-    for book in books:
-        if book['id'] == book_id:
-            book['title'] = data.get('title', book['title'])
-            book['author'] = data.get('author', book['author'])
-            book['cover'] = data.get('cover', book['cover'])
-            book['rating'] = data.get('rating', book['rating'])
-            book['pages'] = data.get('pages', book['pages'])
-            book['genre'] = data.get('genre', book['genre'])
-            book['status'] = data.get('status', book['status'])
-            save_books(books)  # Save to JSON file
-            return jsonify(book)
-    return jsonify({'error': 'Book not found'}), 404
+    if not book:
+        return jsonify({'error': 'Book not found'}), 404
 
-@app.route('/api/books/<int:book_id>', methods=['DELETE'])
-def delete_book(book_id):
-    for i, book in enumerate(books):
-        if book['id'] == book_id:
-            deleted_book = books.pop(i)
-            save_books(books)  # Save to JSON file
-            return jsonify(deleted_book)
-    return jsonify({'error': 'Book not found'}), 404
+    # 1. Handle GET (Untuk Detail Page)
+    if request.method == 'GET':
+        return jsonify(book)
 
-@app.route('/api/books/<int:book_id>', methods=['GET'])
-def get_book_by_id(book_id):
-    for book in books:
-        if book['id'] == book_id:
-            return jsonify(book)
-    return jsonify({'error': 'Book not found'}), 404
+    # 2. Handle PUT (Untuk Update)
+    if request.method == 'PUT':
+        data = request.json
+        book['title'] = data.get('title', book['title'])
+        book['author'] = data.get('author', book['author'])
+        book['cover'] = data.get('cover', book['cover'])
+        book['rating'] = data.get('rating', book['rating'])
+        book['pages'] = data.get('pages', book['pages'])
+        book['genre'] = data.get('genre', book['genre'])
+        book['status'] = data.get('status', book['status'])
+        save_books(books)
+        return jsonify(book)
+
+    # 3. Handle DELETE (Untuk Hapus)
+    if request.method == 'DELETE':
+        books.remove(book)
+        save_books(books)
+        return jsonify(book)
 
 if __name__ == '__main__':
     print(f"Starting Flask server on http://{FLASK_HOST}:{FLASK_PORT}")
