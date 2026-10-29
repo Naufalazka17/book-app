@@ -137,6 +137,13 @@ def delete_book(book_id):
             return jsonify(deleted_book)
     return jsonify({'error': 'Book not found'}), 404
 
+@app.route('/api/books/<int:book_id>', methods=['GET'])
+def get_book_by_id(book_id):
+    for book in books:
+        if book['id'] == book_id:
+            return jsonify(book)
+    return jsonify({'error': 'Book not found'}), 404
+
 if __name__ == '__main__':
     print(f"Starting Flask server on http://{FLASK_HOST}:{FLASK_PORT}")
     print("CORS enabled for development")

@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Search } from 'lucide-react';
+import { Link, useSearchParams } from 'react-router-dom';
 import BookCard from './BookCard';
 
-// Sesuaikan Interface dengan data JSON asli
 interface Book {
   id: number;
   title: string;
@@ -12,23 +12,44 @@ interface Book {
   rating: number;
   pages: number;
   genre: string;
-  status: string; // "read" | "reading" | "want-to-read"
+  status: string;
 }
 
 const BrowseLibrary = () => {
   const [books, setBooks] = useState<Book[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const [debouncedSearch, setDebouncedSearch] = useState('');
+  // Menggunakan useSearchParams agar state tersimpan di URL (Bonus: Preserve state)
+  const [searchParams, setSearchParams] = useSearchParams();
+  
+  const searchQuery = searchParams.get('search') || '';
+  const genreFilter = searchParams.get('genre') || '';
+
+  const [debouncedSearch, setDebouncedSearch] = useState(searchQuery);
 
   // Debounce untuk search
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300);
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      
+      // Update URL param setelah debounce
+      const newParams = new URLSearchParams(searchParams);
+      if (searchQuery) newParams.set('search', searchQuery);
+      else newParams.delete('search');
+      setSearchParams(newParams, { replace: true });
+      
+    }, 300);
     return () => clearTimeout(timer);
-  }, [searchQuery]);
+  }, [searchQuery, setSearchParams]);
+
+  // Fungsi untuk update genre filter di URL
+  const handleGenreChange = (genre: string) => {
+    const newParams = new URLSearchParams(searchParams);
+    if (genre) newParams.set('genre', genre);
+    else newParams.delete('genre');
+    setSearchParams(newParams);
+  };
 
   // Fetch data dari API
   useEffect(() => {
@@ -38,7 +59,7 @@ const BrowseLibrary = () => {
       try {
         let url = 'http://localhost:5001/api/books?';
         if (debouncedSearch) url += `search=${debouncedSearch}&`;
-        if (statusFilter) url += `status=${statusFilter}`;
+        if (genreFilter) url += `genre=${genreFilter}`;
 
         const response = await axios.get(url);
         setBooks(response.data);
@@ -50,7 +71,7 @@ const BrowseLibrary = () => {
     };
 
     fetchBooks();
-  }, [debouncedSearch, statusFilter]);
+  }, [debouncedSearch, genreFilter]);
 
   return (
     <div className="space-y-4">
@@ -62,44 +83,29 @@ const BrowseLibrary = () => {
           placeholder="Search by title or author..."
           className="w-full pl-10 pr-4 py-3 bg-gray-100 rounded-xl border-none focus:outline-none focus:ring-2 focus:ring-blue-500"
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          onChange={(e) => {
+            // Update URL secara langsung saat mengetik (tanpa debounce untuk UI text)
+            const newParams = new URLSearchParams(searchParams);
+            if (e.target.value) newParams.set('search', e.target.value);
+            else newParams.delete('search');
+            setSearchParams(newParams, { replace: true });
+          }}
         />
       </div>
 
-      {/* Filter Status (Disesuaikan dengan data JSON: "read", "reading", "want-to-read") */}
+      {/* Filter Genre (Wajib) */}
       <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-        <button
-          onClick={() => setStatusFilter('')}
-          className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-            statusFilter === '' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'
-          }`}
-        >
-          All
-        </button>
-        <button
-          onClick={() => setStatusFilter('want-to-read')}
-          className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-            statusFilter === 'want-to-read' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'
-          }`}
-        >
-          Want to Read
-        </button>
-        <button
-          onClick={() => setStatusFilter('reading')}
-          className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-            statusFilter === 'reading' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'
-          }`}
-        >
-          Reading
-        </button>
-        <button
-          onClick={() => setStatusFilter('read')}
-          className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-            statusFilter === 'read' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'
-          }`}
-        >
-          Read
-        </button>
+        {['', 'Classic', 'Fiction', 'Dystopian', 'Romance', 'Coming-of-age', 'Fantasy', 'Sci-Fi'].map((genre) => (
+          <button
+            key={genre}
+            onClick={() => handleGenreChange(genre)}
+            className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+              genreFilter === genre ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'
+            }`}
+          >
+            {genre === '' ? 'All Genres' : genre}
+          </button>
+        ))}
       </div>
 
       {/* List Buku */}
@@ -112,13 +118,17 @@ const BrowseLibrary = () => {
           <p className="text-red-500 text-sm">{error}</p>
         </div>
       ) : books.length === 0 ? (
-        <div className="text-center py-10">
-          <p className="text-gray-500">Buku tidak ditemukan.</p>
+        <div className="text-center py-10 bg-gray-50 rounded-xl border border-gray-100">
+          <p className="text-gray-500">No results found.</p>
+          <p className="text-gray-400 text-sm mt-1">Coba kata kunci atau genre lain.</p>
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-4">
           {books.map((book) => (
-            <BookCard key={book.id} book={book as any} variant="library" />
+            // Bungkus dengan Link ke halaman detail (Wajib)
+            <Link to={`/books/${book.id}`} key={book.id} className="block">
+              <BookCard book={book as any} variant="library" />
+            </Link>
           ))}
         </div>
       )}
