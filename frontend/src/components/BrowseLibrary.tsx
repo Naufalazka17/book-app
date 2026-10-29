@@ -123,14 +123,22 @@ const BrowseLibrary = () => {
           <p className="text-gray-400 text-sm mt-1">Coba kata kunci atau genre lain.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-4">
-          {books.map((book) => (
-            // Bungkus dengan Link ke halaman detail (Wajib)
-            <Link to={`/books/${book.id}`} key={book.id} className="block">
-              <BookCard book={book as any} variant="library" />
-            </Link>
-          ))}
-        </div>
+        <>
+          {/* BONUS: Indikator Jumlah Hasil Pencarian */}
+          <p className="text-sm text-gray-500 font-medium mb-2">
+            Menampilkan {books.length} buku {genreFilter && `untuk genre "${genreFilter}"`}
+            {searchQuery && ` dengan kata kunci "${searchQuery}"`}
+          </p>
+
+          <div className="grid grid-cols-2 gap-4">
+            {books.map((book) => (
+              // Bungkus dengan Link ke halaman detail (Wajib)
+              <Link to={`/books/${book.id}`} key={book.id} className="block">
+                <BookCard book={book as any} variant="library" />
+              </Link>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );

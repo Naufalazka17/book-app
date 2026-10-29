@@ -53,37 +53,30 @@ books = load_books()
 @app.route('/api/books', methods=['GET', 'OPTIONS'])
 def get_books():
     if request.method == 'OPTIONS':
-        # Handle preflight request
         response = jsonify({})
         response.headers.add('Access-Control-Allow-Origin', '*')
         response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
         response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
         return response
     
-    # --- TAMBAHAN UNTUK FITUR SEARCH & FILTER ---
-    # 1. Ambil query parameter dari URL (contoh: /api/books?search=naufal&status=reading)
-    search_query = request.args.get('search', '').lower()
-    status_filter = request.args.get('status', '').lower()
+    search_query = request.args.get('search', '').strip().lower()
+    genre_filter = request.args.get('genre', '').strip().lower() # Ubah ke genre
     
-    # 2. Buat variabel penampung sementara
     filtered_books = books.copy()
     
-    # 3. Logika Pencarian (Berdasarkan Judul ATAU Penulis)
     if search_query:
         filtered_books = [
             book for book in filtered_books 
-            if search_query in book.get('title', '').lower() or 
-               search_query in book.get('author', '').lower()
+            if search_query in str(book.get('title', '')).lower() or 
+               search_query in str(book.get('author', '')).lower()
         ]
         
-    # 4. Logika Filter (Berdasarkan Status)
-    if status_filter:
+    if genre_filter:
         filtered_books = [
             book for book in filtered_books 
-            if book.get('status', '').lower() == status_filter
+            if genre_filter == str(book.get('genre', '')).lower()
         ]
         
-    # 5. Kembalikan data yang sudah difilter
     return jsonify(filtered_books)
     # --- AKHIR TAMBAHAN ---
 
