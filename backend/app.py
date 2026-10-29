@@ -60,7 +60,32 @@ def get_books():
         response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
         return response
     
-    return jsonify(books)
+    # --- TAMBAHAN UNTUK FITUR SEARCH & FILTER ---
+    # 1. Ambil query parameter dari URL (contoh: /api/books?search=naufal&status=reading)
+    search_query = request.args.get('search', '').lower()
+    status_filter = request.args.get('status', '').lower()
+    
+    # 2. Buat variabel penampung sementara
+    filtered_books = books.copy()
+    
+    # 3. Logika Pencarian (Berdasarkan Judul ATAU Penulis)
+    if search_query:
+        filtered_books = [
+            book for book in filtered_books 
+            if search_query in book.get('title', '').lower() or 
+               search_query in book.get('author', '').lower()
+        ]
+        
+    # 4. Logika Filter (Berdasarkan Status)
+    if status_filter:
+        filtered_books = [
+            book for book in filtered_books 
+            if book.get('status', '').lower() == status_filter
+        ]
+        
+    # 5. Kembalikan data yang sudah difilter
+    return jsonify(filtered_books)
+    # --- AKHIR TAMBAHAN ---
 
 @app.route('/api/books', methods=['POST'])
 def add_book():
@@ -116,4 +141,4 @@ if __name__ == '__main__':
     print(f"Starting Flask server on http://{FLASK_HOST}:{FLASK_PORT}")
     print("CORS enabled for development")
     print(f"Allowed origins: {CORS_ORIGINS}")
-    app.run(debug=FLASK_DEBUG, port=FLASK_PORT, host=FLASK_HOST) 
+    app.run(debug=FLASK_DEBUG, port=FLASK_PORT, host=FLASK_HOST)
